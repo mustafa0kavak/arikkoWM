@@ -1,0 +1,9 @@
+.vs/
+*.vcxproj.user
+*.log
+*.tmp
+*.cache
+*.pdb
+Debug/
+Release/
+build/
