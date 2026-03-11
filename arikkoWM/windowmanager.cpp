@@ -184,18 +184,42 @@ void WindowManager::Run() {
 
         case Expose: {
             if (ev.xexpose.count != 0) break;
-            if (current_menu != None && ev.xexpose.window == current_menu) break;
 
+            if (current_menu != None && ev.xexpose.window == current_menu) break;
             GC gc = XCreateGC(dpy, ev.xexpose.window, 0, NULL);
             XWindowAttributes attrs;
-            if (XGetWindowAttributes(dpy, ev.xexpose.window, &attrs) && attrs.height > item_height) {
-                XSetForeground(dpy, gc, 0xFFFFFF);
-                XDrawString(dpy, ev.xexpose.window, gc, 10, 15, "Pencere", 7);
+
+            if (XGetWindowAttributes(dpy, ev.xexpose.window, &attrs) && attrs.height > 20) {
+                char* window_name = NULL;
+                Window root_return, parent_return, * children = NULL;
+                unsigned int nchildren = 0;
+
+                if (XQueryTree(dpy, ev.xexpose.window, &root_return, &parent_return, &children, &nchildren) && nchildren > 0) {
+                    if (XFetchName(dpy, children[0], &window_name) == 0) {
+                        XClassHint ch;
+                        if (XGetClassHint(dpy, children[0], &ch)) {
+                            window_name = strdup(ch.res_name);
+                            XFree(ch.res_name);
+                            XFree(ch.res_class);
+                        }
+                    }
+                    if (children) XFree(children);
+                }
+
+                XSetForeground(dpy, gc, 0xFFFFFF); 
+                if (window_name && strlen(window_name) > 0) {
+                    XDrawString(dpy, ev.xexpose.window, gc, 10, 15, window_name, strlen(window_name));
+                    free(window_name); 
+                }
+                else {
+                    XDrawString(dpy, ev.xexpose.window, gc, 10, 15, "Uygulama", 8);
+                }
                 XSetForeground(dpy, gc, 0xFF0000);
                 XFillRectangle(dpy, ev.xexpose.window, gc, attrs.width - 22, 4, 12, 12);
                 XSetForeground(dpy, gc, 0xFFFF00);
                 XFillRectangle(dpy, ev.xexpose.window, gc, attrs.width - 40, 4, 12, 12);
             }
+
             XFreeGC(dpy, gc);
         } break;
         }
