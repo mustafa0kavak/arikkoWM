@@ -1,14 +1,12 @@
 #include "windowmanager.h"
 #include <iostream>
-#include <cstdlib> 
-#include <cstdio>  
+#include <X11/Xutil.h>
+
 int main() {
     std::cout << "wm Baslatiliyor..." << std::endl;
 
     WindowManager wm;
-
-    wm.Run();
-
+    wm.Run(); 
 
     return 0;
 }
