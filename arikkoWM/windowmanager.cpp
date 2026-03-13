@@ -1,11 +1,17 @@
 #include "windowmanager.h"
 #include <X11/cursorfont.h>
 #include <X11/Xutil.h>
+#include <X11/Xatom.h>
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
 
 using namespace std;
+
+extern Atom net_supported;
+extern Atom net_client_list;
+extern Atom net_active_window;
+extern Atom net_wm_name;
 
 void WindowManager::openTerminal() { system("DISPLAY=:1 xterm &"); }
 void WindowManager::refreshScreen() { cout << "Sistem Yenilendi!" << endl; }
@@ -17,6 +23,21 @@ WindowManager::WindowManager() {
     root = DefaultRootWindow(dpy);
     current_menu = None;
     item_height = 30;
+}
+
+
+void WindowManager::OnConfigureRequest(const XConfigureRequestEvent& e) {
+    XWindowChanges changes;
+    changes.x = e.x;
+    changes.y = e.y;
+    changes.width = e.width;
+    changes.height = e.height;
+    changes.border_width = e.border_width;
+    changes.sibling = e.above;
+    changes.stack_mode = e.detail;
+
+    XConfigureWindow(dpy, e.window, e.value_mask, &changes);
+    XFlush(dpy);
 }
 
 WindowManager::~WindowManager() {
@@ -81,27 +102,16 @@ void WindowManager::OnMapRequest(const XMapRequestEvent& e) {
     }
 
     Window frame = XCreateSimpleWindow(dpy, root, attrs.x, attrs.y, attrs.width, attrs.height + 20, 2, 0xFFFFFF, 0x444444);
-    XSelectInput(dpy, frame, SubstructureRedirectMask | SubstructureNotifyMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ExposureMask);
 
-    Cursor cursor = XCreateFontCursor(dpy, 68);
-    XDefineCursor(dpy, frame, cursor);
-    XDefineCursor(dpy, e.window, cursor);
-    XFreeCursor(dpy, cursor);
+    XChangeProperty(dpy, root, net_client_list, XA_WINDOW, 32,
+        PropModeAppend, (unsigned char*)&frame, 1);
+
+    XSelectInput(dpy, frame, SubstructureRedirectMask | SubstructureNotifyMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ExposureMask);
 
     XReparentWindow(dpy, e.window, frame, 0, 20);
     XMapWindow(dpy, e.window);
     XMapWindow(dpy, frame);
     XFlush(dpy);
-}
-
-void WindowManager::OnConfigureRequest(const XConfigureRequestEvent& e) {
-    XWindowChanges changes;
-    changes.x = e.x; changes.y = e.y;
-    changes.width = e.width; changes.height = e.height;
-    changes.border_width = e.border_width;
-    changes.sibling = e.above;
-    changes.stack_mode = e.detail;
-    XConfigureWindow(dpy, e.window, e.value_mask, &changes);
 }
 
 void WindowManager::Run() {
@@ -146,6 +156,9 @@ void WindowManager::Run() {
             XSetWindowBorderWidth(dpy, focused_window, 2);
             XSetWindowBorder(dpy, focused_window, 0x0000FF);
             XSetInputFocus(dpy, focused_window, RevertToParent, CurrentTime);
+
+            XChangeProperty(dpy, root, net_active_window, XA_WINDOW, 32,
+            PropModeReplace, (unsigned char*)&focused_window, 1);
 
             if (ev.xbutton.button == Button1) {
                 // Kapatma Butonu
